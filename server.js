@@ -4,10 +4,16 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data', 'leaves.json');
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+const STATIC_DIR = __dirname;
+
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
 };
 
 function ensureDataDir() {
@@ -19,18 +25,46 @@ function ensureDataDir() {
 function readLeaves() {
   try {
     return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function writeLeaves(leaves) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(leaves), 'utf-8');
 }
 
+function serveStatic(res, filePath) {
+  const safePath = path.normalize(filePath).replace(/^(\.\.[\/\\])+/, '');
+  const fullPath = path.join(STATIC_DIR, safePath);
+  
+  if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
+    // Fall back to index.html for SPA-like behavior
+    const indexPath = path.join(STATIC_DIR, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(fs.readFileSync(indexPath, 'utf-8'));
+      return;
+    }
+    res.writeHead(404);
+    res.end('Not Found');
+    return;
+  }
+
+  const ext = path.extname(fullPath).toLowerCase();
+  const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+  res.writeHead(200, { 'Content-Type': contentType });
+  res.end(fs.readFileSync(fullPath));
+}
+
 const server = http.createServer((req, res) => {
-  // CORS headers
-  Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+  const url = new URL(req.url, `http://localhost:${PORT}`);
+  const pathname = url.pathname;
+
+  // ── CORS for API routes ──
+  if (pathname.startsWith('/api/')) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
 
   // Handle preflight
   if (req.method === 'OPTIONS') {
@@ -39,8 +73,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const url = new URL(req.url, `http://localhost:${PORT}`);
-  const pathname = url.pathname;
+  // ── API ROUTES ──
 
   // GET /api/leaves — fetch all leaves
   if (req.method === 'GET' && pathname === '/api/leaves') {
@@ -88,19 +121,20 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Health check
+  // GET /health
   if (req.method === 'GET' && pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', leaves: readLeaves().length }));
     return;
   }
 
-  res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: 'Not found' }));
+  // ── STATIC FILES ──
+  const filePath = pathname === '/' ? '/index.html' : pathname;
+  serveStatic(res, filePath);
 });
 
 ensureDataDir();
 server.listen(PORT, () => {
-  console.log(`🌳 樹窿 API running on port ${PORT}`);
+  console.log(`🌳 樹窿 running on http://localhost:${PORT}`);
   console.log(`   Leaves: ${readLeaves().length}`);
 });

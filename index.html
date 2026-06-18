@@ -766,8 +766,13 @@ function renderTree() {
 // ═══════════════════════════════════════
 //  API CONFIG
 // ═══════════════════════════════════════
-const API_BASE = 'https://treehollow-api.onrender.com';
-// const API_BASE = 'http://localhost:3000'; // local dev
+const API_BASE = (() => {
+  // If running on Render (same origin), use relative URLs — no CORS needed
+  const host = location.hostname;
+  if (host.includes('onrender.com') || host === 'localhost') return '';
+  // Otherwise (GitHub Pages), use the Render backend URL
+  return 'https://treehollow-api.onrender.com';
+})();
 
 // ═══════════════════════════════════════
 //  LEAVES — Colorful pixel leaves
