@@ -105,19 +105,57 @@
     image-rendering: crisp-edges;
   }
 
-  /* ─── SHAKE HINT ─── */
-  .shake-hint {
+  /* ─── PICK LEAF BUTTON ─── */
+  #pick-leaf-area {
     position: relative; z-index: 2;
-    font-family: 'VT323', monospace;
-    font-size: 18px; color: var(--text-dim);
-    text-align: center; padding: 2px 16px 6px;
-    animation: pulse-hint 2.8s ease-in-out infinite;
-    letter-spacing: 3px;
-    cursor: pointer;
+    text-align: center; padding: 4px 16px 8px;
   }
-  @keyframes pulse-hint {
-    0%,100% { opacity: 0.35; transform: translateY(0); }
-    50% { opacity: 1; transform: translateY(-2px); }
+  #pick-leaf-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 28px;
+    background: linear-gradient(180deg, #1a2a0d 0%, #0d1a05 100%);
+    border: 3px solid #6a994e;
+    color: #a7c957;
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(10px, 2vw, 12px);
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.25s;
+    text-shadow: 0 0 8px #a7c957;
+    image-rendering: pixelated;
+    box-shadow: 0 0 16px rgba(167,201,87,0.2), inset 0 1px 0 rgba(167,201,87,0.08);
+    position: relative;
+    overflow: hidden;
+    animation: leaf-btn-glow 3s ease-in-out infinite;
+  }
+  #pick-leaf-btn::after {
+    content: '';
+    position: absolute; inset: 3px;
+    border: 1px solid rgba(167,201,87,0.2);
+    pointer-events: none;
+  }
+  #pick-leaf-btn:hover, #pick-leaf-btn:active {
+    background: linear-gradient(180deg, #2a3d14 0%, #1a2a0d 100%);
+    border-color: #a7c957;
+    color: #ccff88;
+    box-shadow: 0 0 32px rgba(167,201,87,0.5), inset 0 0 16px rgba(167,201,87,0.15);
+    transform: scale(1.03);
+  }
+  #pick-leaf-btn:active { transform: scale(0.96); }
+  #pick-leaf-btn:disabled {
+    opacity: 0.35; pointer-events: none; filter: grayscale(0.4);
+  }
+  #pick-leaf-btn .pick-icon {
+    font-size: 22px;
+    animation: leaf-btn-float 1.5s ease-in-out infinite;
+  }
+  @keyframes leaf-btn-glow {
+    0%,100% { box-shadow: 0 0 16px rgba(167,201,87,0.2), inset 0 1px 0 rgba(167,201,87,0.08); }
+    50% { box-shadow: 0 0 28px rgba(167,201,87,0.4), inset 0 1px 0 rgba(167,201,87,0.15); }
+  }
+  @keyframes leaf-btn-float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
   }
 
   /* ─── INPUT AREA ─── */
@@ -313,6 +351,7 @@
     #confession-input { height: 72px; font-size: 18px; }
     #modal-card { padding: 24px 18px; }
     #modal-card .confession-text { font-size: 20px; }
+    #pick-leaf-btn { padding: 10px 20px; font-size: 9px; letter-spacing: 1px; }
   }
 
   /* ─── PIXEL SCANLINES SUBTLE ─── */
@@ -345,7 +384,9 @@
   <canvas id="treeCanvas"></canvas>
 </div>
 
-<div class="shake-hint" id="shake-hint">📳 搖一搖電話 · 睇吓人哋嘅心事</div>
+<div id="pick-leaf-area">
+  <button id="pick-leaf-btn"><span class="pick-icon">🍂</span> 執起一片樹葉</button>
+</div>
 
 <div id="input-area">
   <textarea id="confession-input" placeholder="喺度寫低你嘅心事..." maxlength="280"></textarea>
@@ -355,7 +396,7 @@
 <div id="modal-overlay">
   <div id="modal-card">
     <div class="leaf-icon">🍂</div>
-    <div class="leaf-author">── 一片葉子跌咗落嚟 ──</div>
+    <div class="leaf-author">── 你執起咗一片樹葉 ──</div>
     <div class="confession-text" id="modal-text"></div>
     <button class="close-btn" id="modal-close">放 返 上 樹</button>
   </div>
@@ -529,6 +570,38 @@ function buildTreePixels() {
     }
   }
 
+  // ── TREE HOLLOW — dark oval carved into trunk ──
+  const HOLLOW_CY = baseY - 13;
+  const HOLLOW_RX = 3; // horizontal radius
+  const HOLLOW_RY = 5; // vertical radius
+  const HOLLOW_COLOR = '#030805';
+  const HOLLOW_RIM = '#0d1a0d';
+  // Remove existing trunk pixels inside the hollow ellipse
+  for (let i = pixels.length - 1; i >= 0; i--) {
+    const p = pixels[i];
+    const dx = (p.col - cx) / HOLLOW_RX;
+    const dy = (p.row - HOLLOW_CY) / HOLLOW_RY;
+    if (dx * dx + dy * dy <= 1) {
+      pixels.splice(i, 1);
+    }
+  }
+  // Paint hollow
+  for (let dr = -HOLLOW_RY - 1; dr <= HOLLOW_RY + 1; dr++) {
+    for (let dc = -HOLLOW_RX - 1; dc <= HOLLOW_RX + 1; dc++) {
+      const ndx = dc / HOLLOW_RX;
+      const ndy = dr / HOLLOW_RY;
+      const ndist = ndx * ndx + ndy * ndy;
+      if (ndist <= 1.05) {
+        const col = cx + dc;
+        const row = HOLLOW_CY + dr;
+        const color = ndist < 0.6 ? HOLLOW_COLOR
+          : ndist < 0.85 ? '#051008'
+          : HOLLOW_RIM;
+        pixels.push({ col, row, color });
+      }
+    }
+  }
+
   // ── CANOPY — multiple layered blobs ──
   const canopyBlobs = [
     { cy: baseY - 30, r: 14, fillChance: 0.88, hues: [CANOPY_DEEP, CANOPY_DARK, CANOPY_MID] },
@@ -648,6 +721,16 @@ function renderTree() {
   glowGrad.addColorStop(1, 'transparent');
   treeCtx.fillStyle = glowGrad;
   treeCtx.fillRect(0, 0, treeCanvas.width, treeCanvas.height);
+
+  // ── TREE HOLLOW GLOW ──
+  const hollowPx = treeData.cx * PIXEL + PIXEL / 2;
+  const hollowPy = (treeData.baseY - 13) * PIXEL;
+  const hollowGlow = treeCtx.createRadialGradient(hollowPx, hollowPy, PIXEL * 1, hollowPx, hollowPy, PIXEL * 7);
+  hollowGlow.addColorStop(0, 'rgba(255,200,100,0.08)');
+  hollowGlow.addColorStop(0.5, 'rgba(255,180,60,0.03)');
+  hollowGlow.addColorStop(1, 'transparent');
+  treeCtx.fillStyle = hollowGlow;
+  treeCtx.fillRect(hollowPx - PIXEL * 7, hollowPy - PIXEL * 7, PIXEL * 14, PIXEL * 14);
 
   // ── LEAVES ──
   for (const leaf of leaves) {
@@ -890,23 +973,10 @@ inputEl.addEventListener('keydown', (e) => {
 });
 
 // ═══════════════════════════════════════
-//  SHAKE DETECTION (Mobile)
+//  PICK LEAF BUTTON
 // ═══════════════════════════════════════
-let lastShakeTime = 0;
-const SHAKE_THRESHOLD = 16;
-const SHAKE_COOLDOWN = 2000;
-
-function handleMotion(e) {
-  const acc = e.accelerationIncludingGravity;
-  if (!acc) return;
-  const mag = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
-  const now = Date.now();
-
-  if (mag > SHAKE_THRESHOLD && now - lastShakeTime > SHAKE_COOLDOWN && leaves.length > 0) {
-    lastShakeTime = now;
-    dropRandomLeaf();
-  }
-}
+let lastPickTime = 0;
+const PICK_COOLDOWN = 2000;
 
 function dropRandomLeaf() {
   if (leaves.length === 0) return;
@@ -914,7 +984,7 @@ function dropRandomLeaf() {
   const leaf = leaves.splice(idx, 1)[0];
   saveLeaves();
 
-  // Drop animation: leaf falls from tree
+  // Drop animation: sparkles at leaf position
   if (treeData) {
     const dropX = leaf.col * PIXEL + treeCanvas.getBoundingClientRect().left;
     const dropY = leaf.row * PIXEL + treeCanvas.getBoundingClientRect().top;
@@ -943,6 +1013,20 @@ function spawnDropSparkles(x, y) {
     setTimeout(() => sparkle.remove(), 700);
   }
 }
+
+document.getElementById('pick-leaf-btn').addEventListener('click', () => {
+  if (leaves.length === 0) {
+    showToast('樹上仲未有葉喎 🌿');
+    return;
+  }
+  const now = Date.now();
+  if (now - lastPickTime < PICK_COOLDOWN) return;
+  lastPickTime = now;
+  if (leaves.length === 1) {
+    showToast('🍂 最後一片葉跌咗落嚟！');
+  }
+  dropRandomLeaf();
+});
 
 // ═══════════════════════════════════════
 //  MODAL
@@ -978,24 +1062,6 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
 });
 
 // ═══════════════════════════════════════
-//  MOTION PERMISSION (iOS)
-// ═══════════════════════════════════════
-async function requestMotionPermission() {
-  if (typeof DeviceMotionEvent !== 'undefined') {
-    if (typeof DeviceMotionEvent.requestPermission === 'function') {
-      try {
-        const resp = await DeviceMotionEvent.requestPermission();
-        if (resp === 'granted') {
-          window.addEventListener('devicemotion', handleMotion);
-        }
-      } catch(e) { /* user denied */ }
-    } else {
-      window.addEventListener('devicemotion', handleMotion);
-    }
-  }
-}
-
-// ═══════════════════════════════════════
 //  TOAST
 // ═══════════════════════════════════════
 function showToast(msg) {
@@ -1007,35 +1073,6 @@ function showToast(msg) {
 }
 
 // ═══════════════════════════════════════
-//  DESKTOP FALLBACK: Click tree to drop
-// ═══════════════════════════════════════
-function doDesktopDrop() {
-  if (leaves.length === 0) return;
-  const now = Date.now();
-  if (now - lastShakeTime < SHAKE_COOLDOWN) return;
-  lastShakeTime = now;
-  dropRandomLeaf();
-}
-
-treeCanvas.addEventListener('click', () => {
-  doDesktopDrop();
-  if (leaves.length > 1) showToast('🍂 一片葉子跌咗落嚟！');
-});
-
-document.getElementById('shake-hint').addEventListener('click', () => {
-  doDesktopDrop();
-  if (leaves.length > 1) showToast('🍂 一片葉子跌咗落嚟！');
-});
-
-// Also support keyboard "shake" - spacebar
-document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && document.activeElement !== inputEl) {
-    e.preventDefault();
-    doDesktopDrop();
-  }
-});
-
-// ═══════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════
 function init() {
@@ -1043,7 +1080,6 @@ function init() {
   resizeTree();
   drawTree();
   animate();
-  requestMotionPermission();
 
   if (leaves.length > 0) {
     setTimeout(() => showToast(`樹上有 ${leaves.length} 片葉等緊你 🌿`), 1000);
