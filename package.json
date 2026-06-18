@@ -1,0 +1,12 @@
+{
+  "name": "treehollow-api",
+  "version": "0.1.0",
+  "description": "Tree Hollow shared confession backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

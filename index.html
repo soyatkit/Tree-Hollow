@@ -81,6 +81,19 @@
     letter-spacing: 3px;
     opacity: 0.8;
   }
+  .version-badge {
+    display: inline-block;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #ff9944;
+    border: 2px solid #ff9944;
+    padding: 4px 10px;
+    margin-top: 8px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 6px #ff9944;
+    box-shadow: 0 0 10px rgba(255,153,68,0.3);
+    image-rendering: pixelated;
+  }
   .leaf-counter {
     font-family: 'Press Start 2P', monospace;
     font-size: 10px;
@@ -376,6 +389,7 @@
 
 <header>
   <h1>🌳 樹 窿 🌳</h1>
+  <div class="version-badge">測試版 v0.1</div>
   <div class="subtitle">講低你嘅心事，掛喺樹上面</div>
   <div class="leaf-counter">✦ 樹上共有 <span id="leaf-count">0</span> 片葉 ✦</div>
 </header>
@@ -750,6 +764,12 @@ function renderTree() {
 }
 
 // ═══════════════════════════════════════
+//  API CONFIG
+// ═══════════════════════════════════════
+const API_BASE = 'https://treehollow-api.onrender.com';
+// const API_BASE = 'http://localhost:3000'; // local dev
+
+// ═══════════════════════════════════════
 //  LEAVES — Colorful pixel leaves
 // ═══════════════════════════════════════
 const LEAF_COLORS = [
@@ -761,16 +781,19 @@ const LEAF_COLORS = [
 const LEAF_EMOJIS = ['🍂','🍁','🍃','🌿','🍀','💚','🌱','✨'];
 
 class Leaf {
-  constructor(text) {
-    this.id = Date.now() + Math.random();
+  constructor(text, id) {
+    this.id = id || (Date.now() + '_' + Math.random().toString(36).slice(2, 9));
     this.text = text;
     this.color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
     this.emoji = LEAF_EMOJIS[Math.floor(Math.random() * LEAF_EMOJIS.length)];
     this.size = 10 + Math.random() * 10;
     this.wobble = Math.random() * Math.PI * 2;
     this.wobbleSpeed = 0.5 + Math.random() * 1.5;
+    this._assignPosition();
+  }
+
+  _assignPosition() {
     if (treeData) {
-      // Place within canopy region
       const canopyPixels = treeData.pixels.filter(p =>
         !p.color.startsWith('#3d') && !p.color.startsWith('#5c') && !p.color.startsWith('#1e') &&
         p.color !== CANOPY_DEEP
@@ -784,24 +807,93 @@ class Leaf {
       this.row = -40;
     }
   }
+
+  toData() {
+    return {
+      id: this.id,
+      text: this.text,
+      color: this.color,
+      emoji: this.emoji,
+      size: this.size,
+      wobble: this.wobble,
+      wobbleSpeed: this.wobbleSpeed,
+    };
+  }
+
+  static fromData(d) {
+    const l = new Leaf(d.text, d.id);
+    l.color = d.color || l.color;
+    l.emoji = d.emoji || l.emoji;
+    l.size = d.size || l.size;
+    l.wobble = d.wobble || l.wobble;
+    l.wobbleSpeed = d.wobbleSpeed || l.wobbleSpeed;
+    l._assignPosition();
+    return l;
+  }
 }
 
 let leaves = [];
 
-function loadLeaves() {
-  try {
-    const raw = localStorage.getItem('treehollow_v2_leaves');
-    if (raw) {
-      const data = JSON.parse(raw);
-      leaves = data.map(d => Object.assign(new Leaf(''), d));
-    }
-  } catch(e) { leaves = []; }
+// ── API helpers ──
+async function apiFetch(path, options = {}) {
+  const url = API_BASE + path;
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.json();
 }
 
-function saveLeaves() {
+async function loadLeaves() {
   try {
-    localStorage.setItem('treehollow_v2_leaves', JSON.stringify(leaves));
-  } catch(e) { /* storage full */ }
+    const data = await apiFetch('/api/leaves');
+    leaves = data.map(d => Leaf.fromData(d));
+    console.log(`🌿 Loaded ${leaves.length} leaves from server`);
+  } catch(e) {
+    console.warn('⚠️  Cannot reach server, loading local cache...');
+    try {
+      const raw = localStorage.getItem('treehollow_v2_leaves');
+      if (raw) {
+        const data = JSON.parse(raw);
+        leaves = data.map(d => Leaf.fromData(d));
+      }
+    } catch(e2) { leaves = []; }
+  }
+}
+
+async function apiAddLeaf(text) {
+  const tempLeaf = new Leaf(text);
+  const payload = tempLeaf.toData();
+  try {
+    const saved = await apiFetch('/api/leaves', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    tempLeaf.id = saved.id;
+    leaves.push(tempLeaf);
+    return tempLeaf;
+  } catch(e) {
+    // Fallback: keep locally
+    leaves.push(tempLeaf);
+    localStorage.setItem('treehollow_v2_leaves', JSON.stringify(leaves.map(l => l.toData())));
+    return tempLeaf;
+  }
+}
+
+async function apiRemoveLeaf(leafId) {
+  try {
+    await apiFetch(`/api/leaves/${leafId}`, { method: 'DELETE' });
+  } catch(e) {
+    // Fallback: remove locally
+  }
+  const idx = leaves.findIndex(l => l.id === leafId);
+  if (idx !== -1) {
+    const [removed] = leaves.splice(idx, 1);
+    localStorage.setItem('treehollow_v2_leaves', JSON.stringify(leaves.map(l => l.toData())));
+    return removed;
+  }
+  return null;
 }
 
 function drawLeaf(leaf) {
@@ -945,17 +1037,14 @@ function spawnSparkles(x, y, color) {
 const inputEl = document.getElementById('confession-input');
 const submitBtn = document.getElementById('submit-btn');
 
-function submitConfession() {
+async function submitConfession() {
   const text = inputEl.value.trim();
   if (!text) return;
 
   submitBtn.disabled = true;
-  // Recalc tree data if needed
   if (!treeData) treeData = buildTreePixels();
-  const leaf = new Leaf(text);
-  leaves.push(leaf);
-  saveLeaves();
 
+  const leaf = await apiAddLeaf(text);
   const btnRect = submitBtn.getBoundingClientRect();
   animateFlyingLeaf(btnRect, leaf);
 
@@ -978,11 +1067,13 @@ inputEl.addEventListener('keydown', (e) => {
 let lastPickTime = 0;
 const PICK_COOLDOWN = 2000;
 
-function dropRandomLeaf() {
+async function dropRandomLeaf() {
   if (leaves.length === 0) return;
   const idx = Math.floor(Math.random() * leaves.length);
-  const leaf = leaves.splice(idx, 1)[0];
-  saveLeaves();
+  const leaf = leaves[idx];
+
+  // Remove from server + local
+  await apiRemoveLeaf(leaf.id);
 
   // Drop animation: sparkles at leaf position
   if (treeData) {
@@ -1045,13 +1136,11 @@ function showModal(leaf) {
   iconEl.style.animation = 'leaf-spin 0.9s cubic-bezier(0.34, 1.56, 0.64, 1)';
 }
 
-document.getElementById('modal-close').addEventListener('click', () => {
+document.getElementById('modal-close').addEventListener('click', async () => {
   document.getElementById('modal-overlay').classList.remove('active');
   const text = document.getElementById('modal-text').textContent;
   if (text && treeData) {
-    const leaf = new Leaf(text);
-    leaves.push(leaf);
-    saveLeaves();
+    await apiAddLeaf(text);
   }
 });
 
@@ -1075,8 +1164,8 @@ function showToast(msg) {
 // ═══════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════
-function init() {
-  loadLeaves();
+async function init() {
+  await loadLeaves();
   resizeTree();
   drawTree();
   animate();
@@ -1084,6 +1173,22 @@ function init() {
   if (leaves.length > 0) {
     setTimeout(() => showToast(`樹上有 ${leaves.length} 片葉等緊你 🌿`), 1000);
   }
+
+  // Periodic refresh — check for new leaves from other devices every 8s
+  setInterval(async () => {
+    try {
+      const data = await apiFetch('/api/leaves');
+      const serverIds = new Set(data.map(d => d.id));
+      // Add new leaves not yet in local state
+      for (const d of data) {
+        if (!leaves.find(l => l.id === d.id)) {
+          leaves.push(Leaf.fromData(d));
+        }
+      }
+      // Remove leaves deleted by others
+      leaves = leaves.filter(l => serverIds.has(l.id));
+    } catch(e) { /* silent — server might be sleeping */ }
+  }, 8000);
 }
 
 window.addEventListener('load', init);
