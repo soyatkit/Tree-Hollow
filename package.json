@@ -2,9 +2,8 @@
   "name": "treehollow-api",
   "version": "0.1.0",
   "description": "Tree Hollow shared confession backend",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "dev": "node -e \"require('http').createServer((req,res)=>{res.end('API running on Vercel')}).listen(3000,()=>console.log('dev on :3000'))\""
   },
   "engines": {
     "node": ">=18"
