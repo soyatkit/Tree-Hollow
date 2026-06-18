@@ -746,6 +746,21 @@ function renderTree() {
   treeCtx.fillStyle = hollowGlow;
   treeCtx.fillRect(hollowPx - PIXEL * 7, hollowPy - PIXEL * 7, PIXEL * 14, PIXEL * 14);
 
+  // ── CHARACTER ──
+  if (charImg.complete && charImg.naturalWidth > 0) {
+    const charH = PIXEL * 16; // character height in pixels
+    const charW = (charImg.naturalWidth / charImg.naturalHeight) * charH;
+    const charX = (treeData.cx + 21) * PIXEL;
+    const charY = groundY - charH;
+    treeCtx.imageSmoothingEnabled = false;
+    treeCtx.drawImage(charImg, charX, charY, charW, charH);
+    // Subtle glow behind character
+    treeCtx.fillStyle = 'rgba(255,200,120,0.04)';
+    treeCtx.beginPath();
+    treeCtx.ellipse(charX + charW / 2, charY + charH * 0.55, charW * 0.8, charH * 0.3, 0, 0, Math.PI * 2);
+    treeCtx.fill();
+  }
+
   // ── LEAVES ──
   for (const leaf of leaves) {
     drawLeaf(leaf);
@@ -762,6 +777,12 @@ function renderTree() {
     treeCtx.fillRect(Math.round(sx * PIXEL), Math.round(sy * PIXEL), ps, ps);
   }
 }
+
+// ═══════════════════════════════════════
+//  CHARACTER SPRITE
+// ═══════════════════════════════════════
+const charImg = new Image();
+charImg.src = 'cha1.png';
 
 // ═══════════════════════════════════════
 //  API CONFIG
