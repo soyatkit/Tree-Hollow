@@ -2,26 +2,39 @@
 <html lang="zh-HK">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>樹窿 - Tree Hollow</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --bg: #0a0a0f;
+    --bg-deep: #050510;
+    --bg: #0a0a1a;
     --neon: #00ff88;
-    --neon-dim: #00cc66;
-    --accent: #ff6b9d;
-    --gold: #ffd700;
-    --panel: #111122;
-    --text: #c0ffe0;
-    --trunk: #4a3728;
-    --trunk-light: #6b4c3b;
+    --neon-soft: #66ffaa;
+    --neon-dim: #009944;
+    --accent: #ff5588;
+    --accent-soft: #ff88aa;
+    --gold: #ffcc33;
+    --gold-soft: #ffe088;
+    --panel: #0f0f24;
+    --panel-light: #1a1a35;
+    --text: #ccffdd;
+    --text-dim: #668899;
+    --trunk: #3d2b1f;
+    --trunk-light: #5c4033;
+    --trunk-dark: #1e1008;
+    --canopy-dark: #0a3d1a;
+    --canopy-mid: #0d5e24;
+    --canopy-light: #1a8a30;
+    --canopy-glow: #2ecc50;
+    --canopy-spark: #5eff7e;
+    --ground: #0d1a0d;
   }
 
   body {
-    background: var(--bg);
+    background: var(--bg-deep);
     font-family: 'VT323', 'Courier New', monospace;
     color: var(--text);
     overflow-x: hidden;
@@ -33,44 +46,58 @@
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
+    cursor: default;
   }
 
-  /* ─── STARFIELD BACKGROUND ─── */
-  #starfield {
-    position: fixed; inset: 0; z-index: 0;
-    pointer-events: none;
-  }
+  /* ─── STARFIELD ─── */
+  #starfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+  /* ─── AMBIENT PARTICLES ─── */
+  #particles { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
 
   /* ─── HEADER ─── */
   header {
     position: relative; z-index: 2;
-    text-align: center; padding: 20px 16px 8px;
+    text-align: center; padding: 24px 16px 4px;
   }
   header h1 {
     font-family: 'Press Start 2P', monospace;
-    font-size: clamp(14px, 3.5vw, 22px);
+    font-size: clamp(13px, 3.2vw, 20px);
     color: var(--neon);
-    text-shadow: 0 0 10px var(--neon), 0 0 30px var(--neon), 0 0 60px var(--neon-dim);
-    letter-spacing: 4px;
+    text-shadow:
+      0 0 8px var(--neon),
+      0 0 20px var(--neon),
+      0 0 40px var(--neon-dim),
+      0 0 80px var(--neon-dim);
+    letter-spacing: 6px;
     image-rendering: pixelated;
+    line-height: 1.6;
   }
   header .subtitle {
-    font-size: 20px; color: #88aacc; margin-top: 6px;
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: var(--text-dim);
+    margin-top: 6px;
     letter-spacing: 3px;
+    opacity: 0.8;
   }
   .leaf-counter {
-    font-size: 18px; color: var(--gold);
-    margin-top: 8px;
-    text-shadow: 0 0 8px var(--gold);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--gold);
+    margin-top: 10px;
+    text-shadow: 0 0 10px var(--gold), 0 0 20px var(--gold);
+    letter-spacing: 1px;
   }
-  .leaf-counter span { font-size: 26px; font-weight: bold; }
+  .leaf-counter span { font-size: 22px; }
 
   /* ─── CANVAS CONTAINER ─── */
   #tree-container {
     position: relative; z-index: 2;
-    width: 100%; max-width: 500px;
+    width: 100%; max-width: 520px;
     flex: 1;
     display: flex; align-items: center; justify-content: center;
+    min-height: 280px;
   }
   #treeCanvas {
     width: 100%; height: 100%;
@@ -81,187 +108,263 @@
   /* ─── SHAKE HINT ─── */
   .shake-hint {
     position: relative; z-index: 2;
-    font-size: 16px; color: #667799;
-    text-align: center; padding: 4px 16px;
-    animation: pulse-hint 2.5s ease-in-out infinite;
-    letter-spacing: 2px;
+    font-family: 'VT323', monospace;
+    font-size: 18px; color: var(--text-dim);
+    text-align: center; padding: 2px 16px 6px;
+    animation: pulse-hint 2.8s ease-in-out infinite;
+    letter-spacing: 3px;
+    cursor: pointer;
   }
   @keyframes pulse-hint {
-    0%,100% { opacity: 0.4; }
-    50% { opacity: 1; }
+    0%,100% { opacity: 0.35; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-2px); }
   }
 
   /* ─── INPUT AREA ─── */
   #input-area {
     position: relative; z-index: 2;
     width: 100%; max-width: 500px;
-    padding: 0 16px 16px;
+    padding: 0 16px 20px;
     display: flex; flex-direction: column; gap: 10px;
   }
   #confession-input {
-    width: 100%; height: 80px;
+    width: 100%; height: 82px;
     background: var(--panel);
-    border: 3px solid #334;
+    border: 3px solid #223344;
     color: var(--text);
     font-family: 'VT323', monospace;
     font-size: 20px;
-    padding: 12px;
+    padding: 14px;
     resize: none;
     outline: none;
     transition: border-color 0.3s, box-shadow 0.3s;
     letter-spacing: 1px;
     line-height: 1.4;
+    caret-color: var(--neon);
   }
   #confession-input:focus {
     border-color: var(--neon);
-    box-shadow: 0 0 16px rgba(0,255,136,0.2), inset 0 0 8px rgba(0,255,136,0.05);
+    box-shadow:
+      0 0 20px rgba(0,255,136,0.15),
+      inset 0 0 12px rgba(0,255,136,0.04);
   }
-  #confession-input::placeholder {
-    color: #445566; letter-spacing: 2px;
-  }
+  #confession-input::placeholder { color: #334455; letter-spacing: 2px; }
+
   #submit-btn {
-    width: 100%; padding: 16px;
-    background: #112211;
+    width: 100%; padding: 18px;
+    background: linear-gradient(180deg, #0d2a15 0%, #081a0d 100%);
     border: 3px solid var(--neon);
     color: var(--neon);
     font-family: 'Press Start 2P', monospace;
-    font-size: clamp(11px, 2.5vw, 14px);
+    font-size: clamp(11px, 2.6vw, 14px);
     cursor: pointer;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
     transition: all 0.2s;
-    text-shadow: 0 0 6px var(--neon);
+    text-shadow: 0 0 8px var(--neon);
     image-rendering: pixelated;
     position: relative;
     overflow: hidden;
+    box-shadow:
+      0 0 16px rgba(0,255,136,0.2),
+      inset 0 1px 0 rgba(0,255,136,0.1);
+  }
+  #submit-btn::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(0,255,136,0.2);
+    pointer-events: none;
   }
   #submit-btn:hover, #submit-btn:active {
-    background: #1a3a2a;
-    box-shadow: 0 0 24px rgba(0,255,136,0.4), inset 0 0 16px rgba(0,255,136,0.1);
+    background: linear-gradient(180deg, #143a20 0%, #0d2a15 100%);
+    box-shadow:
+      0 0 32px rgba(0,255,136,0.5),
+      inset 0 0 20px rgba(0,255,136,0.15);
     transform: scale(1.02);
   }
-  #submit-btn:active { transform: scale(0.98); }
-  #submit-btn:disabled {
-    opacity: 0.4; pointer-events: none;
-  }
+  #submit-btn:active { transform: scale(0.97); }
+  #submit-btn:disabled { opacity: 0.35; pointer-events: none; filter: grayscale(0.5); }
 
   /* ─── FLYING LEAF ─── */
   .flying-leaf {
-    position: fixed; z-index: 10;
+    position: fixed; z-index: 20;
     pointer-events: none;
-    font-size: 28px;
-    filter: drop-shadow(0 0 8px var(--neon));
-    transition: none;
+    font-size: 32px;
+    filter: drop-shadow(0 0 12px var(--neon)) drop-shadow(0 0 24px var(--neon-dim));
+    will-change: transform, left, top;
+  }
+  .flying-leaf .trail {
+    position: absolute;
+    font-size: 14px;
+    opacity: 0.3;
+    filter: drop-shadow(0 0 6px var(--neon));
   }
 
   /* ─── MODAL OVERLAY ─── */
   #modal-overlay {
     position: fixed; inset: 0; z-index: 100;
-    background: rgba(0,0,0,0.85);
+    background: rgba(2,2,10,0.9);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     display: flex; align-items: center; justify-content: center;
     opacity: 0; pointer-events: none;
-    transition: opacity 0.4s;
+    transition: opacity 0.5s;
   }
   #modal-overlay.active { opacity: 1; pointer-events: all; }
 
   #modal-card {
     background: var(--panel);
     border: 4px solid var(--gold);
-    padding: 28px 24px;
-    max-width: 380px; width: 90%;
+    padding: 32px 28px;
+    max-width: 400px; width: 92%;
     text-align: center;
-    box-shadow: 0 0 40px rgba(255,215,0,0.3), 0 0 80px rgba(255,215,0,0.1);
+    box-shadow:
+      0 0 40px rgba(255,204,51,0.3),
+      0 0 80px rgba(255,204,51,0.12),
+      0 0 120px rgba(255,204,51,0.05);
     image-rendering: pixelated;
+    position: relative;
+  }
+  #modal-card::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border: 1px solid rgba(255,204,51,0.25);
+    pointer-events: none;
   }
   #modal-card .leaf-icon {
-    font-size: 48px; margin-bottom: 12px;
-    animation: leaf-spin 0.8s ease-out;
+    font-size: 56px; margin-bottom: 16px;
+    animation: leaf-spin 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   @keyframes leaf-spin {
-    0% { transform: rotate(0deg) scale(0); opacity: 0; }
-    60% { transform: rotate(720deg) scale(1.3); opacity: 1; }
-    100% { transform: rotate(720deg) scale(1); opacity: 1; }
+    0% { transform: rotate(0deg) scale(0); opacity: 0; filter: blur(4px); }
+    50% { transform: rotate(540deg) scale(1.4); opacity: 1; filter: blur(0); }
+    100% { transform: rotate(720deg) scale(1); opacity: 1; filter: blur(0); }
   }
   #modal-card .confession-text {
-    font-size: 22px; color: var(--text);
-    line-height: 1.5; margin: 12px 0;
+    font-family: 'VT323', monospace;
+    font-size: 24px;
+    color: var(--text);
+    line-height: 1.6;
+    margin: 16px 0;
     letter-spacing: 1px;
     word-break: break-word;
+    text-shadow: 0 0 10px rgba(204,255,221,0.3);
+  }
+  #modal-card .leaf-author {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    letter-spacing: 2px;
   }
   #modal-card .close-btn {
-    margin-top: 16px; padding: 10px 32px;
+    margin-top: 18px; padding: 12px 36px;
     background: transparent;
     border: 2px solid var(--gold);
     color: var(--gold);
     font-family: 'Press Start 2P', monospace;
-    font-size: 12px; cursor: pointer;
-    letter-spacing: 2px;
+    font-size: 11px; cursor: pointer;
+    letter-spacing: 3px;
     transition: all 0.2s;
+    text-shadow: 0 0 6px var(--gold);
+    image-rendering: pixelated;
   }
   #modal-card .close-btn:hover {
-    background: rgba(255,215,0,0.15);
-    box-shadow: 0 0 16px rgba(255,215,0,0.4);
+    background: rgba(255,204,51,0.15);
+    box-shadow: 0 0 20px rgba(255,204,51,0.4), inset 0 0 10px rgba(255,204,51,0.1);
   }
 
   /* ─── TOAST ─── */
   .toast {
-    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
     z-index: 200;
-    background: var(--panel); border: 2px solid var(--neon);
-    color: var(--neon); padding: 12px 28px;
-    font-family: 'Press Start 2P', monospace; font-size: 12px;
-    box-shadow: 0 0 20px rgba(0,255,136,0.3);
-    animation: toast-in 0.3s ease-out, toast-out 0.3s ease-in 2s forwards;
+    background: var(--panel);
+    border: 2px solid var(--neon);
+    color: var(--neon);
+    padding: 14px 32px;
+    font-family: 'Press Start 2P', monospace; font-size: 10px;
+    box-shadow: 0 0 24px rgba(0,255,136,0.4), 0 0 48px rgba(0,255,136,0.15);
+    animation: toast-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), toast-out 0.3s ease-in 2.2s forwards;
     letter-spacing: 2px;
+    text-shadow: 0 0 6px var(--neon);
+    white-space: nowrap;
   }
-  @keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(20px); } }
-  @keyframes toast-out { to { opacity: 0; transform: translateX(-50%) translateY(-20px); } }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(24px) scale(0.9); }
+  }
+  @keyframes toast-out {
+    to { opacity: 0; transform: translateX(-50%) translateY(-16px) scale(0.9); filter: blur(3px); }
+  }
+
+  /* ─── SPARKLE BURST ─── */
+  .sparkle {
+    position: fixed;
+    z-index: 150;
+    pointer-events: none;
+    width: 4px; height: 4px;
+    background: var(--gold);
+    box-shadow: 0 0 6px var(--gold), 0 0 12px var(--gold-soft);
+  }
 
   /* ─── RESPONSIVE ─── */
   @media (max-width: 400px) {
-    header h1 { font-size: 12px; }
-    #confession-input { height: 68px; font-size: 18px; }
+    header h1 { font-size: 11px; letter-spacing: 4px; }
+    header .subtitle { font-size: 18px; }
+    #confession-input { height: 72px; font-size: 18px; }
+    #modal-card { padding: 24px 18px; }
+    #modal-card .confession-text { font-size: 20px; }
+  }
+
+  /* ─── PIXEL SCANLINES SUBTLE ─── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 999;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
   }
 </style>
 </head>
 <body>
 
-<!-- Starfield -->
 <canvas id="starfield"></canvas>
+<canvas id="particles"></canvas>
 
-<!-- Header -->
 <header>
   <h1>🌳 樹 窿 🌳</h1>
   <div class="subtitle">講低你嘅心事，掛喺樹上面</div>
-  <div class="leaf-counter">樹上共有 <span id="leaf-count">0</span> 片葉</div>
+  <div class="leaf-counter">✦ 樹上共有 <span id="leaf-count">0</span> 片葉 ✦</div>
 </header>
 
-<!-- Tree Canvas -->
 <div id="tree-container">
   <canvas id="treeCanvas"></canvas>
 </div>
 
-<!-- Shake Hint -->
-<div class="shake-hint" id="shake-hint">📳 搖一搖電話，睇吓人哋嘅心事</div>
+<div class="shake-hint" id="shake-hint">📳 搖一搖電話 · 睇吓人哋嘅心事</div>
 
-<!-- Input Area -->
 <div id="input-area">
   <textarea id="confession-input" placeholder="喺度寫低你嘅心事..." maxlength="280"></textarea>
-  <button id="submit-btn">講 比 樹 窿</button>
+  <button id="submit-btn">✦ 講 比 樹 窿 ✦</button>
 </div>
 
-<!-- Modal -->
 <div id="modal-overlay">
   <div id="modal-card">
     <div class="leaf-icon">🍂</div>
+    <div class="leaf-author">── 一片葉子跌咗落嚟 ──</div>
     <div class="confession-text" id="modal-text"></div>
-    <button class="close-btn" id="modal-close">關 閉</button>
+    <button class="close-btn" id="modal-close">放 返 上 樹</button>
   </div>
 </div>
 
 <script>
-// ─────────────────────────────────────
-//  STARFIELD
-// ─────────────────────────────────────
+// ═══════════════════════════════════════
+//  STARFIELD — Parallax depth layers
+// ═══════════════════════════════════════
 const starCanvas = document.getElementById('starfield');
 const starCtx = starCanvas.getContext('2d');
 let stars = [];
@@ -272,14 +375,18 @@ function resizeStarfield() {
 }
 function createStars() {
   stars = [];
-  const count = Math.floor((starCanvas.width * starCanvas.height) / 1200);
+  const count = Math.floor((starCanvas.width * starCanvas.height) / 800);
   for (let i = 0; i < count; i++) {
+    const depth = Math.random(); // 0=far 1=near
     stars.push({
       x: Math.random() * starCanvas.width,
       y: Math.random() * starCanvas.height,
-      r: Math.random() * 1.5 + 0.3,
+      r: depth * 1.8 + 0.2,
       twinkle: Math.random() * Math.PI * 2,
-      speed: 0.01 + Math.random() * 0.03,
+      speed: 0.008 + Math.random() * 0.04,
+      depth,
+      hue: 180 + Math.random() * 60, // blue-ish stars
+      baseAlpha: 0.15 + depth * 0.6,
     });
   }
 }
@@ -287,9 +394,15 @@ function drawStars() {
   starCtx.clearRect(0, 0, starCanvas.width, starCanvas.height);
   for (const s of stars) {
     s.twinkle += s.speed;
-    const alpha = 0.3 + 0.4 * Math.sin(s.twinkle);
-    starCtx.fillStyle = `rgba(180,200,255,${alpha})`;
-    starCtx.fillRect(Math.round(s.x), Math.round(s.y), Math.ceil(s.r), Math.ceil(s.r));
+    const alpha = s.baseAlpha + 0.2 * Math.sin(s.twinkle);
+    starCtx.fillStyle = `hsla(${s.hue},60%,75%,${alpha})`;
+    const pr = Math.max(1, Math.ceil(s.r));
+    starCtx.fillRect(Math.round(s.x), Math.round(s.y), pr, pr);
+    // Bright core for near stars
+    if (s.depth > 0.6 && Math.sin(s.twinkle) > 0.7) {
+      starCtx.fillStyle = `rgba(255,255,255,${alpha * 0.6})`;
+      starCtx.fillRect(Math.round(s.x), Math.round(s.y), 1, 1);
+    }
   }
   requestAnimationFrame(drawStars);
 }
@@ -298,78 +411,166 @@ createStars();
 drawStars();
 window.addEventListener('resize', () => { resizeStarfield(); createStars(); });
 
-// ─────────────────────────────────────
-//  TREE CANVAS
-// ─────────────────────────────────────
+// ═══════════════════════════════════════
+//  AMBIENT FIREFLY PARTICLES
+// ═══════════════════════════════════════
+const particlesCanvas = document.getElementById('particles');
+const pCtx = particlesCanvas.getContext('2d');
+let fireflies = [];
+
+function resizeParticles() {
+  particlesCanvas.width = window.innerWidth;
+  particlesCanvas.height = window.innerHeight;
+}
+function createFireflies() {
+  fireflies = [];
+  for (let i = 0; i < 25; i++) {
+    fireflies.push({
+      x: Math.random() * particlesCanvas.width,
+      y: Math.random() * particlesCanvas.height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      life: Math.random() * Math.PI * 2,
+      size: 1 + Math.random() * 2,
+      glow: 0.3 + Math.random() * 0.5,
+      hue: Math.random() > 0.5 ? 120 : 45, // green or gold
+    });
+  }
+}
+function drawFireflies() {
+  pCtx.clearRect(0, 0, particlesCanvas.width, particlesCanvas.height);
+  for (const f of fireflies) {
+    f.life += 0.02;
+    f.x += f.vx + Math.sin(f.life * 1.3) * 0.4;
+    f.y += f.vy + Math.cos(f.life * 0.7) * 0.4;
+    // Wrap around
+    if (f.x < -20) f.x = particlesCanvas.width + 20;
+    if (f.x > particlesCanvas.width + 20) f.x = -20;
+    if (f.y < -20) f.y = particlesCanvas.height + 20;
+    if (f.y > particlesCanvas.height + 20) f.y = -20;
+    // Draw glow
+    const alpha = f.glow * (0.5 + 0.5 * Math.sin(f.life * 2.5));
+    const gradient = pCtx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.size * 8);
+    gradient.addColorStop(0, `hsla(${f.hue},100%,70%,${alpha})`);
+    gradient.addColorStop(0.4, `hsla(${f.hue},100%,50%,${alpha * 0.3})`);
+    gradient.addColorStop(1, 'transparent');
+    pCtx.fillStyle = gradient;
+    pCtx.fillRect(f.x - f.size * 8, f.y - f.size * 8, f.size * 16, f.size * 16);
+    // Core
+    pCtx.fillStyle = `hsla(${f.hue},100%,85%,${alpha})`;
+    pCtx.fillRect(Math.round(f.x), Math.round(f.y), Math.ceil(f.size), Math.ceil(f.size));
+  }
+  requestAnimationFrame(drawFireflies);
+}
+resizeParticles();
+createFireflies();
+drawFireflies();
+window.addEventListener('resize', () => { resizeParticles(); createFireflies(); });
+
+// ═══════════════════════════════════════
+//  PIXEL ART TREE — Rich layered canopy
+// ═══════════════════════════════════════
 const treeCanvas = document.getElementById('treeCanvas');
 const treeCtx = treeCanvas.getContext('2d');
-const PIXEL = 6; // pixel size
+const PIXEL = 7;
 
 function resizeTree() {
   const container = document.getElementById('tree-container');
-  const w = container.clientWidth;
-  const h = container.clientHeight;
-  treeCanvas.width = w;
-  treeCanvas.height = h;
-  drawTree();
+  treeCanvas.width = container.clientWidth;
+  treeCanvas.height = container.clientHeight;
+  treeData = buildTreePixels();
+  renderTree();
 }
 window.addEventListener('resize', resizeTree);
 
-// ─────────────────────────────────────
-//  PIXEL ART TREE DRAWING
-// ─────────────────────────────────────
-// Tree definition: arrays of [col, row] pixel blocks
-const TRUNK_COLOR = '#4a3728';
-const TRUNK_HIGHLIGHT = '#6b4c3b';
-const TRUNK_DARK = '#2e1f14';
-const CANOPY_DARK = '#1a5c2a';
-const CANOPY_MID = '#228b22';
-const CANOPY_LIGHT = '#2ecc40';
-const CANOPY_HIGHLIGHT = '#5eff6e';
+const TRUNK_COLOR = '#3d2b1f';
+const TRUNK_HIGHLIGHT = '#5c4033';
+const TRUNK_DARK = '#1e1008';
+const CANOPY_DEEP = '#052e12';
+const CANOPY_DARK = '#0a4d1e';
+const CANOPY_MID = '#0f6b28';
+const CANOPY_LIGHT = '#1a8a30';
+const CANOPY_GLOW = '#2ecc50';
+const CANOPY_SPARK = '#5eff7e';
 
 function buildTreePixels() {
   const pixels = [];
   const cx = Math.floor(treeCanvas.width / 2 / PIXEL);
-  const baseY = Math.floor(treeCanvas.height * 0.92 / PIXEL);
+  const baseY = Math.floor(treeCanvas.height * 0.94 / PIXEL);
 
-  // Trunk
-  for (let row = baseY - 18; row <= baseY; row++) {
-    const trunkW = row > baseY - 14 ? 4 : 5;
+  // ── ROOTS ──
+  const rootDefs = [
+    { dx: -8, dy: 0, len: 8 }, { dx: 8, dy: 0, len: 8 },
+    { dx: -12, dy: 1, len: 5 }, { dx: 12, dy: 1, len: 5 },
+  ];
+  for (const r of rootDefs) {
+    for (let i = 0; i < r.len; i++) {
+      const col = cx + r.dx + Math.sign(r.dx) * Math.floor(i * 0.4);
+      const row = baseY + r.dy + Math.floor(i * 0.5);
+      pixels.push({ col, row, color: TRUNK_DARK });
+    }
+  }
+
+  // ── TRUNK ──
+  for (let row = baseY - 22; row <= baseY; row++) {
+    let trunkW;
+    if (row > baseY - 4) trunkW = 8;       // base flare
+    else if (row > baseY - 12) trunkW = 7;
+    else if (row > baseY - 18) trunkW = 6;
+    else trunkW = 5;
     const startX = cx - Math.floor(trunkW / 2);
     for (let i = 0; i < trunkW; i++) {
       const col = startX + i;
-      const color = (i === 0 || i === trunkW - 1) && row < baseY - 2 ? TRUNK_DARK
-        : (i === 2) ? TRUNK_HIGHLIGHT : TRUNK_COLOR;
+      let color = TRUNK_COLOR;
+      if (i === 0) color = TRUNK_DARK;
+      else if (i === trunkW - 1) color = TRUNK_DARK;
+      else if (i === Math.floor(trunkW / 2)) color = TRUNK_HIGHLIGHT;
       pixels.push({ col, row, color });
     }
   }
 
-  // Canopy - layered circles of pixel blocks
-  const canopyLayers = [
-    { cy: baseY - 28, r: 12, color: CANOPY_DARK },
-    { cy: baseY - 33, r: 14, color: CANOPY_MID },
-    { cy: baseY - 38, r: 15, color: CANOPY_MID },
-    { cy: baseY - 43, r: 14, color: CANOPY_LIGHT },
-    { cy: baseY - 47, r: 12, color: CANOPY_LIGHT },
-    { cy: baseY - 50, r: 9, color: CANOPY_HIGHLIGHT },
-    { cy: baseY - 53, r: 6, color: CANOPY_HIGHLIGHT },
+  // ── CANOPY — multiple layered blobs ──
+  const canopyBlobs = [
+    { cy: baseY - 30, r: 14, fillChance: 0.88, hues: [CANOPY_DEEP, CANOPY_DARK, CANOPY_MID] },
+    { cy: baseY - 36, r: 16, fillChance: 0.85, hues: [CANOPY_DARK, CANOPY_MID, CANOPY_LIGHT] },
+    { cy: baseY - 42, r: 17, fillChance: 0.82, hues: [CANOPY_MID, CANOPY_LIGHT, CANOPY_GLOW] },
+    { cy: baseY - 48, r: 15, fillChance: 0.80, hues: [CANOPY_MID, CANOPY_LIGHT, CANOPY_GLOW] },
+    { cy: baseY - 53, r: 13, fillChance: 0.78, hues: [CANOPY_LIGHT, CANOPY_GLOW, CANOPY_SPARK] },
+    { cy: baseY - 56, r: 10, fillChance: 0.75, hues: [CANOPY_LIGHT, CANOPY_GLOW, CANOPY_SPARK] },
+    { cy: baseY - 58, r: 7, fillChance: 0.72, hues: [CANOPY_GLOW, CANOPY_SPARK] },
+    { cy: baseY - 60, r: 5, fillChance: 0.70, hues: [CANOPY_GLOW, CANOPY_SPARK] },
+    // Side branches
+    { cy: baseY - 28, r: 8, fillChance: 0.85, hues: [CANOPY_DEEP, CANOPY_DARK, CANOPY_MID], offsetX: -10 },
+    { cy: baseY - 28, r: 8, fillChance: 0.85, hues: [CANOPY_DEEP, CANOPY_DARK, CANOPY_MID], offsetX: 10 },
+    { cy: baseY - 32, r: 9, fillChance: 0.82, hues: [CANOPY_DARK, CANOPY_MID, CANOPY_LIGHT], offsetX: -12 },
+    { cy: baseY - 32, r: 9, fillChance: 0.82, hues: [CANOPY_DARK, CANOPY_MID, CANOPY_LIGHT], offsetX: 12 },
+    { cy: baseY - 38, r: 7, fillChance: 0.80, hues: [CANOPY_MID, CANOPY_LIGHT, CANOPY_GLOW], offsetX: -13 },
+    { cy: baseY - 38, r: 7, fillChance: 0.80, hues: [CANOPY_MID, CANOPY_LIGHT, CANOPY_GLOW], offsetX: 13 },
   ];
 
-  for (const layer of canopyLayers) {
-    for (let dr = -layer.r; dr <= layer.r; dr++) {
-      for (let dc = -layer.r; dc <= layer.r; dc++) {
-        if (dr * dr + dc * dc <= layer.r * layer.r && Math.random() > 0.15) {
-          const col = cx + dc;
-          const row = layer.cy + dr;
-          const existing = pixels.find(p => p.col === col && p.row === row);
-          if (!existing) {
-            const shade = Math.random();
-            const color = shade < 0.15 ? CANOPY_HIGHLIGHT
-              : shade < 0.4 ? CANOPY_LIGHT
-              : shade < 0.75 ? CANOPY_MID
-              : CANOPY_DARK;
-            pixels.push({ col, row, color });
-          }
+  const occupied = new Set(pixels.map(p => `${p.col},${p.row}`));
+
+  for (const blob of canopyBlobs) {
+    const bcx = cx + (blob.offsetX || 0);
+    for (let dr = -blob.r - 1; dr <= blob.r + 1; dr++) {
+      for (let dc = -blob.r - 1; dc <= blob.r + 1; dc++) {
+        const dist = Math.sqrt(dr * dr + dc * dc);
+        if (dist > blob.r + 0.5) continue;
+        if (dist < blob.r - 0.5 || Math.random() < blob.fillChance) {
+          const col = bcx + dc;
+          const row = blob.cy + dr;
+          const key = `${col},${row}`;
+          if (occupied.has(key)) continue;
+          // Shade based on distance from center and randomness
+          const shadeRand = Math.random();
+          const depthFactor = (dist / blob.r);
+          let color;
+          if (shadeRand < 0.05) color = blob.hues[blob.hues.length - 1]; // spark
+          else if (shadeRand < 0.2) color = blob.hues[Math.min(blob.hues.length - 1, Math.floor(shadeRand * blob.hues.length * 2))];
+          else if (depthFactor < 0.4) color = blob.hues[Math.min(blob.hues.length - 2, Math.floor(Math.random() * blob.hues.length))];
+          else color = blob.hues[Math.floor(Math.random() * Math.min(2, blob.hues.length))];
+          pixels.push({ col, row, color });
+          occupied.add(key);
         }
       }
     }
@@ -385,60 +586,120 @@ function drawTree() {
   renderTree();
 }
 
+let swayOffset = 0;
 function renderTree() {
   treeCtx.clearRect(0, 0, treeCanvas.width, treeCanvas.height);
-
-  // Draw ground
-  const groundY = Math.floor(treeCanvas.height * 0.96);
-  treeCtx.fillStyle = '#1a2a1a';
-  treeCtx.fillRect(0, groundY, treeCanvas.width, treeCanvas.height - groundY);
-  // Ground pixel detail
-  for (let x = 0; x < treeCanvas.width; x += PIXEL * 2) {
-    treeCtx.fillStyle = Math.random() > 0.5 ? '#2a3a2a' : '#1a2a1a';
-    treeCtx.fillRect(x, groundY, PIXEL * 2, PIXEL * 2);
-  }
-
   if (!treeData) return;
 
-  // Draw tree pixels
-  for (const p of treeData.pixels) {
-    treeCtx.fillStyle = p.color;
-    treeCtx.fillRect(p.col * PIXEL, p.row * PIXEL, PIXEL, PIXEL);
+  swayOffset = Math.sin(performance.now() * 0.0003) * 0.7;
+
+  // ── GROUND ──
+  const groundY = Math.floor(treeCanvas.height * 0.96);
+  const grad = treeCtx.createLinearGradient(0, groundY, 0, treeCanvas.height);
+  grad.addColorStop(0, '#0d1a0d');
+  grad.addColorStop(0.5, '#071207');
+  grad.addColorStop(1, '#030a03');
+  treeCtx.fillStyle = grad;
+  treeCtx.fillRect(0, groundY, treeCanvas.width, treeCanvas.height - groundY);
+  // Ground pixel texture
+  for (let x = 0; x < treeCanvas.width; x += PIXEL) {
+    const shade = Math.random();
+    treeCtx.fillStyle = shade > 0.6 ? '#1a2e1a' : shade > 0.3 ? '#112211' : '#0a180a';
+    treeCtx.fillRect(x, groundY, PIXEL, PIXEL);
+    if (Math.random() > 0.7) {
+      treeCtx.fillStyle = '#1a301a';
+      treeCtx.fillRect(x + 2, groundY - PIXEL + 2, 2, 2);
+    }
   }
 
-  // Draw leaves
+  // ── GRASS TUFFS ──
+  treeCtx.fillStyle = '#1a3a1a';
+  for (let x = 4; x < treeCanvas.width - 4; x += PIXEL * 2) {
+    if (Math.random() > 0.5) {
+      treeCtx.fillRect(x, groundY - PIXEL, PIXEL * 0.5, PIXEL);
+    }
+  }
+
+  // ── TREE PIXELS (with slight sway for canopy) ──
+  for (const p of treeData.pixels) {
+    const isCanopy = p.color !== TRUNK_COLOR && p.color !== TRUNK_HIGHLIGHT
+      && p.color !== TRUNK_DARK;
+    const sx = isCanopy ? swayOffset * (1 - (treeData.baseY - p.row) / 60) : 0;
+
+    if (p.color === CANOPY_SPARK && Math.random() > 0.9) {
+      // Occasional sparkle glint
+      treeCtx.fillStyle = '#aaffcc';
+    } else {
+      treeCtx.fillStyle = p.color;
+    }
+    treeCtx.fillRect(
+      Math.round((p.col + sx) * PIXEL),
+      p.row * PIXEL,
+      PIXEL, PIXEL
+    );
+  }
+
+  // ── CANOPY GLOW OVERLAY ──
+  const glowCx = treeData.cx * PIXEL + PIXEL / 2;
+  const glowCy = (treeData.baseY - 42) * PIXEL;
+  const glowGrad = treeCtx.createRadialGradient(glowCx, glowCy, PIXEL * 6, glowCx, glowCy, PIXEL * 22);
+  glowGrad.addColorStop(0, 'rgba(46,204,80,0.06)');
+  glowGrad.addColorStop(0.5, 'rgba(26,138,48,0.03)');
+  glowGrad.addColorStop(1, 'transparent');
+  treeCtx.fillStyle = glowGrad;
+  treeCtx.fillRect(0, 0, treeCanvas.width, treeCanvas.height);
+
+  // ── LEAVES ──
   for (const leaf of leaves) {
     drawLeaf(leaf);
   }
+
+  // ── SWAYING SPARKLE DOTS IN CANOPY ──
+  const now = performance.now() * 0.001;
+  for (let i = 0; i < 8; i++) {
+    const sx = treeData.cx + Math.sin(now * 1.7 + i * 1.3) * 10;
+    const sy = treeData.baseY - 35 + Math.cos(now * 1.3 + i) * 22;
+    const alpha = 0.3 + 0.3 * Math.sin(now * 3 + i * 2);
+    treeCtx.fillStyle = `rgba(180,255,200,${alpha})`;
+    const ps = Math.ceil(1 + Math.sin(now * 2 + i) * 1);
+    treeCtx.fillRect(Math.round(sx * PIXEL), Math.round(sy * PIXEL), ps, ps);
+  }
 }
 
-// ─────────────────────────────────────
-//  LEAVES
-// ─────────────────────────────────────
-const LEAF_COLORS = ['#ff6b3d','#ff8c42','#ffaa33','#ffcc00','#e63946','#f4a261','#e76f51','#d4a373','#faedcd','#ccd5ae'];
-const LEAF_SHAPES = ['🍂','🍁','🍃','🌿','🍀','🪹'];
+// ═══════════════════════════════════════
+//  LEAVES — Colorful pixel leaves
+// ═══════════════════════════════════════
+const LEAF_COLORS = [
+  '#ff5c3a','#ff7b4a','#ff9933','#ffbb22','#ffdd00',
+  '#e8453c','#f0725a','#f4a261','#e9c46a',
+  '#d44a6a','#c77d5a','#b5835a',
+  '#a7c957','#6a994e',
+];
+const LEAF_EMOJIS = ['🍂','🍁','🍃','🌿','🍀','💚','🌱','✨'];
 
 class Leaf {
   constructor(text) {
     this.id = Date.now() + Math.random();
     this.text = text;
     this.color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
-    this.emoji = LEAF_SHAPES[Math.floor(Math.random() * LEAF_SHAPES.length)];
-    this.size = 10 + Math.random() * 8; // pixel size
-    // Position within canopy
-    if (treeData) {
-      const canopyPixels = treeData.pixels.filter(p =>
-        p.color !== TRUNK_COLOR && p.color !== TRUNK_HIGHLIGHT && p.color !== TRUNK_DARK &&
-        p.color !== CANOPY_DARK
-      );
-      const pick = canopyPixels[Math.floor(Math.random() * canopyPixels.length)] || { col: treeData.cx, row: treeData.baseY - 40 };
-      this.col = pick.col + (Math.random() - 0.5) * 6;
-      this.row = pick.row + (Math.random() - 0.5) * 4;
-    } else {
-      this.col = treeData?.cx || 0;
-      this.row = (treeData?.baseY || 0) - 40;
-    }
+    this.emoji = LEAF_EMOJIS[Math.floor(Math.random() * LEAF_EMOJIS.length)];
+    this.size = 10 + Math.random() * 10;
     this.wobble = Math.random() * Math.PI * 2;
+    this.wobbleSpeed = 0.5 + Math.random() * 1.5;
+    if (treeData) {
+      // Place within canopy region
+      const canopyPixels = treeData.pixels.filter(p =>
+        !p.color.startsWith('#3d') && !p.color.startsWith('#5c') && !p.color.startsWith('#1e') &&
+        p.color !== CANOPY_DEEP
+      );
+      const pick = canopyPixels[Math.floor(Math.random() * canopyPixels.length)]
+        || { col: treeData.cx, row: treeData.baseY - 40 };
+      this.col = pick.col + (Math.random() - 0.5) * 8;
+      this.row = pick.row + (Math.random() - 0.5) * 5;
+    } else {
+      this.col = 0;
+      this.row = -40;
+    }
   }
 }
 
@@ -446,7 +707,7 @@ let leaves = [];
 
 function loadLeaves() {
   try {
-    const raw = localStorage.getItem('treehollow_leaves');
+    const raw = localStorage.getItem('treehollow_v2_leaves');
     if (raw) {
       const data = JSON.parse(raw);
       leaves = data.map(d => Object.assign(new Leaf(''), d));
@@ -455,102 +716,184 @@ function loadLeaves() {
 }
 
 function saveLeaves() {
-  localStorage.setItem('treehollow_leaves', JSON.stringify(leaves));
+  try {
+    localStorage.setItem('treehollow_v2_leaves', JSON.stringify(leaves));
+  } catch(e) { /* storage full */ }
 }
 
 function drawLeaf(leaf) {
+  if (!treeData) return;
   const x = leaf.col * PIXEL;
   const y = leaf.row * PIXEL;
+  const wobbleX = swayOffset * (1 - (treeData.baseY - leaf.row) / 60);
   treeCtx.save();
-  treeCtx.translate(x, y);
-  treeCtx.rotate(Math.sin(leaf.wobble + performance.now() * 0.001) * 0.15);
-  // Pixel leaf shape
+  treeCtx.translate(x + wobbleX, y);
+  treeCtx.rotate(Math.sin(leaf.wobble + performance.now() * 0.001 * leaf.wobbleSpeed) * 0.18);
   const s = leaf.size;
+  // Diamond pixel leaf shape
   treeCtx.fillStyle = leaf.color;
-  // Simple diamond pixel leaf
-  treeCtx.fillRect(0, -s, 2, s * 2);
-  treeCtx.fillRect(-2, -s * 0.6, 2, s * 1.2);
-  treeCtx.fillRect(2, -s * 0.6, 2, s * 1.2);
-  treeCtx.fillRect(-4, -s * 0.2, 2, s * 0.6);
-  treeCtx.fillRect(4, -s * 0.2, 2, s * 0.6);
-  // stem
+  treeCtx.fillRect(0, -Math.floor(s * 0.9), 2, Math.floor(s * 1.6));
+  treeCtx.fillRect(-2, -Math.floor(s * 0.5), 2, Math.floor(s));
+  treeCtx.fillRect(2, -Math.floor(s * 0.5), 2, Math.floor(s));
+  treeCtx.fillRect(-4, -Math.floor(s * 0.15), 2, Math.floor(s * 0.4));
+  treeCtx.fillRect(4, -Math.floor(s * 0.15), 2, Math.floor(s * 0.4));
+  // Highlight
+  treeCtx.fillStyle = 'rgba(255,255,255,0.25)';
+  treeCtx.fillRect(0, -Math.floor(s * 0.8), 1, Math.floor(s * 0.5));
+  // Stem
   treeCtx.fillStyle = '#8B7355';
-  treeCtx.fillRect(-1, s, 2, 4);
+  treeCtx.fillRect(-1, Math.floor(s * 0.7), 2, 5);
   treeCtx.restore();
 }
 
-// ─────────────────────────────────────
+// ═══════════════════════════════════════
 //  ANIMATION LOOP
-// ─────────────────────────────────────
+// ═══════════════════════════════════════
 function animate() {
   renderTree();
   document.getElementById('leaf-count').textContent = leaves.length;
   requestAnimationFrame(animate);
 }
 
-// ─────────────────────────────────────
-//  FLYING LEAF ANIMATION
-// ─────────────────────────────────────
-function animateFlyingLeaf(fromEl, leaf) {
-  const fromRect = fromEl.getBoundingClientRect();
+// ═══════════════════════════════════════
+//  FLYING LEAF — Curved path animation
+// ═══════════════════════════════════════
+function animateFlyingLeaf(fromRect, leaf) {
   const containerRect = treeCanvas.getBoundingClientRect();
+  const targetX = leaf.col * PIXEL + containerRect.left + PIXEL / 2;
+  const targetY = leaf.row * PIXEL + containerRect.top + PIXEL / 2;
 
-  const targetX = leaf.col * PIXEL + containerRect.left;
-  const targetY = leaf.row * PIXEL + containerRect.top;
+  const startX = fromRect.left + fromRect.width / 2;
+  const startY = fromRect.top + fromRect.height / 2;
 
   const el = document.createElement('div');
   el.className = 'flying-leaf';
   el.textContent = leaf.emoji;
-  el.style.left = (fromRect.left + fromRect.width / 2 - 14) + 'px';
-  el.style.top = (fromRect.top + fromRect.height / 2 - 14) + 'px';
-  el.style.fontSize = '18px';
-  el.style.transition = 'all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+  el.style.left = startX + 'px';
+  el.style.top = startY + 'px';
+  el.style.transform = 'scale(0.3)';
   document.body.appendChild(el);
 
-  requestAnimationFrame(() => {
-    el.style.left = targetX + 'px';
-    el.style.top = targetY + 'px';
-    el.style.fontSize = '8px';
-    el.style.opacity = '0.4';
-  });
+  // Trail elements
+  const trailCount = 5;
+  const trails = [];
+  for (let i = 0; i < trailCount; i++) {
+    const t = document.createElement('div');
+    t.className = 'trail';
+    t.textContent = leaf.emoji;
+    t.style.position = 'absolute';
+    t.style.left = '0px';
+    t.style.top = '0px';
+    el.appendChild(t);
+    trails.push(t);
+  }
 
-  setTimeout(() => el.remove(), 1100);
+  const duration = 1200;
+  const startTime = performance.now();
+
+  function frame(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    // Ease-out + arc
+    const ease = 1 - Math.pow(1 - t, 3);
+    const arc = -Math.sin(t * Math.PI) * 80;
+    const cx = startX + (targetX - startX) * ease;
+    const cy = startY + (targetY - startY) * ease + arc;
+    el.style.left = cx + 'px';
+    el.style.top = cy + 'px';
+    const scale = 0.3 + ease * 0.7;
+    const rotation = ease * 720;
+    el.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+    el.style.opacity = t > 0.85 ? 1 - (t - 0.85) / 0.15 : 1;
+
+    // Trail
+    for (let i = 0; i < trails.length; i++) {
+      const trailT = Math.max(0, t - (i + 1) * 0.06);
+      const trailEase = 1 - Math.pow(1 - trailT, 3);
+      const trailArc = -Math.sin(trailT * Math.PI) * 80;
+      const tx = startX + (targetX - startX) * trailEase;
+      const ty = startY + (targetY - startY) * trailEase + trailArc;
+      trails[i].style.left = (tx - cx) + 'px';
+      trails[i].style.top = (ty - cy) + 'px';
+      trails[i].style.opacity = trailT > 0 ? 0.25 * (1 - i / trailCount) * (1 - trailT) : 0;
+    }
+
+    if (t < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      el.remove();
+      // Sparkle burst at destination
+      spawnSparkles(targetX, targetY, leaf.color);
+    }
+  }
+  requestAnimationFrame(frame);
 }
 
-// ─────────────────────────────────────
+// ═══════════════════════════════════════
+//  SPARKLE BURST
+// ═══════════════════════════════════════
+function spawnSparkles(x, y, color) {
+  const count = 12;
+  for (let i = 0; i < count; i++) {
+    const sparkle = document.createElement('div');
+    sparkle.className = 'sparkle';
+    sparkle.style.left = x + 'px';
+    sparkle.style.top = y + 'px';
+    sparkle.style.background = color;
+    sparkle.style.boxShadow = `0 0 6px ${color}, 0 0 14px ${color}`;
+    const angle = (Math.PI * 2 * i) / count;
+    const dist = 30 + Math.random() * 40;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
+    sparkle.style.transition = 'all 0.7s cubic-bezier(0, 0.7, 0.3, 1)';
+    document.body.appendChild(sparkle);
+
+    requestAnimationFrame(() => {
+      sparkle.style.transform = `translate(${dx}px, ${dy}px) scale(0)`;
+      sparkle.style.opacity = '0';
+    });
+    setTimeout(() => sparkle.remove(), 800);
+  }
+}
+
+// ═══════════════════════════════════════
 //  SUBMIT CONFESSION
-// ─────────────────────────────────────
+// ═══════════════════════════════════════
 const inputEl = document.getElementById('confession-input');
 const submitBtn = document.getElementById('submit-btn');
 
-submitBtn.addEventListener('click', () => {
+function submitConfession() {
   const text = inputEl.value.trim();
   if (!text) return;
 
   submitBtn.disabled = true;
+  // Recalc tree data if needed
+  if (!treeData) treeData = buildTreePixels();
   const leaf = new Leaf(text);
   leaves.push(leaf);
   saveLeaves();
 
-  animateFlyingLeaf(inputEl, leaf);
+  const btnRect = submitBtn.getBoundingClientRect();
+  animateFlyingLeaf(btnRect, leaf);
 
   inputEl.value = '';
-  setTimeout(() => { submitBtn.disabled = false; inputEl.focus(); }, 1100);
-});
+  setTimeout(() => { submitBtn.disabled = false; inputEl.focus(); }, 1300);
+}
 
-// Enter to submit (shift+enter for newline)
+submitBtn.addEventListener('click', submitConfession);
+
 inputEl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
-    submitBtn.click();
+    submitConfession();
   }
 });
 
-// ─────────────────────────────────────
-//  SHAKE DETECTION
-// ─────────────────────────────────────
+// ═══════════════════════════════════════
+//  SHAKE DETECTION (Mobile)
+// ═══════════════════════════════════════
 let lastShakeTime = 0;
-const SHAKE_THRESHOLD = 18;
+const SHAKE_THRESHOLD = 16;
 const SHAKE_COOLDOWN = 2000;
 
 function handleMotion(e) {
@@ -571,30 +914,61 @@ function dropRandomLeaf() {
   const leaf = leaves.splice(idx, 1)[0];
   saveLeaves();
 
-  // Show the confession
+  // Drop animation: leaf falls from tree
+  if (treeData) {
+    const dropX = leaf.col * PIXEL + treeCanvas.getBoundingClientRect().left;
+    const dropY = leaf.row * PIXEL + treeCanvas.getBoundingClientRect().top;
+    spawnDropSparkles(dropX, dropY);
+  }
+
   showModal(leaf);
 }
 
+function spawnDropSparkles(x, y) {
+  for (let i = 0; i < 16; i++) {
+    const sparkle = document.createElement('div');
+    sparkle.className = 'sparkle';
+    sparkle.style.left = x + 'px';
+    sparkle.style.top = y + 'px';
+    sparkle.style.background = '#ffcc33';
+    sparkle.style.boxShadow = '0 0 8px #ffcc33, 0 0 18px #ffe088';
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 20 + Math.random() * 50;
+    sparkle.style.transition = 'all 0.6s ease-out';
+    document.body.appendChild(sparkle);
+    requestAnimationFrame(() => {
+      sparkle.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist + 20}px) scale(0)`;
+      sparkle.style.opacity = '0';
+    });
+    setTimeout(() => sparkle.remove(), 700);
+  }
+}
+
+// ═══════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════
 function showModal(leaf) {
   const overlay = document.getElementById('modal-overlay');
   const textEl = document.getElementById('modal-text');
-  document.querySelector('#modal-card .leaf-icon').textContent = leaf.emoji;
+  const iconEl = document.querySelector('#modal-card .leaf-icon');
+  iconEl.textContent = leaf.emoji;
   textEl.textContent = leaf.text;
   overlay.classList.add('active');
 
-  // Restart leaf spin animation
-  const icon = document.querySelector('#modal-card .leaf-icon');
-  icon.style.animation = 'none';
-  icon.offsetHeight;
-  icon.style.animation = 'leaf-spin 0.8s ease-out';
+  // Restart spin animation
+  iconEl.style.animation = 'none';
+  iconEl.offsetHeight;
+  iconEl.style.animation = 'leaf-spin 0.9s cubic-bezier(0.34, 1.56, 0.64, 1)';
 }
 
 document.getElementById('modal-close').addEventListener('click', () => {
   document.getElementById('modal-overlay').classList.remove('active');
-  // Put leaf back on tree
-  const leaf = new Leaf(document.getElementById('modal-text').textContent);
-  leaves.push(leaf);
-  saveLeaves();
+  const text = document.getElementById('modal-text').textContent;
+  if (text && treeData) {
+    const leaf = new Leaf(text);
+    leaves.push(leaf);
+    saveLeaves();
+  }
 });
 
 document.getElementById('modal-overlay').addEventListener('click', (e) => {
@@ -603,58 +977,67 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
   }
 });
 
-// Request motion permission (iOS)
+// ═══════════════════════════════════════
+//  MOTION PERMISSION (iOS)
+// ═══════════════════════════════════════
 async function requestMotionPermission() {
-  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-    try {
-      const resp = await DeviceMotionEvent.requestPermission();
-      if (resp === 'granted') {
-        window.addEventListener('devicemotion', handleMotion);
-      }
-    } catch(e) {
-      showToast('未能獲取動作權限 😢');
+  if (typeof DeviceMotionEvent !== 'undefined') {
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      try {
+        const resp = await DeviceMotionEvent.requestPermission();
+        if (resp === 'granted') {
+          window.addEventListener('devicemotion', handleMotion);
+        }
+      } catch(e) { /* user denied */ }
+    } else {
+      window.addEventListener('devicemotion', handleMotion);
     }
-  } else {
-    window.addEventListener('devicemotion', handleMotion);
   }
 }
 
-// ─────────────────────────────────────
+// ═══════════════════════════════════════
 //  TOAST
-// ─────────────────────────────────────
+// ═══════════════════════════════════════
 function showToast(msg) {
   const toast = document.createElement('div');
   toast.className = 'toast';
   toast.textContent = msg;
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 2500);
+  setTimeout(() => toast.remove(), 2600);
 }
 
-// ─────────────────────────────────────
-//  DESKTOP FALLBACK: CLICK TREE TO DROP
-// ─────────────────────────────────────
-treeCanvas.addEventListener('click', (e) => {
+// ═══════════════════════════════════════
+//  DESKTOP FALLBACK: Click tree to drop
+// ═══════════════════════════════════════
+function doDesktopDrop() {
   if (leaves.length === 0) return;
   const now = Date.now();
   if (now - lastShakeTime < SHAKE_COOLDOWN) return;
   lastShakeTime = now;
   dropRandomLeaf();
-  showToast('🍂 一片葉子跌咗落嚟！');
+}
+
+treeCanvas.addEventListener('click', () => {
+  doDesktopDrop();
+  if (leaves.length > 1) showToast('🍂 一片葉子跌咗落嚟！');
 });
 
-// Also allow click on shake hint
 document.getElementById('shake-hint').addEventListener('click', () => {
-  if (leaves.length === 0) return;
-  const now = Date.now();
-  if (now - lastShakeTime < SHAKE_COOLDOWN) return;
-  lastShakeTime = now;
-  dropRandomLeaf();
-  showToast('🍂 一片葉子跌咗落嚟！');
+  doDesktopDrop();
+  if (leaves.length > 1) showToast('🍂 一片葉子跌咗落嚟！');
 });
 
-// ─────────────────────────────────────
+// Also support keyboard "shake" - spacebar
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && document.activeElement !== inputEl) {
+    e.preventDefault();
+    doDesktopDrop();
+  }
+});
+
+// ═══════════════════════════════════════
 //  INIT
-// ─────────────────────────────────────
+// ═══════════════════════════════════════
 function init() {
   loadLeaves();
   resizeTree();
@@ -662,13 +1045,13 @@ function init() {
   animate();
   requestMotionPermission();
 
-  // Show initial toast if there are saved leaves
   if (leaves.length > 0) {
-    setTimeout(() => showToast(`樹上有 ${leaves.length} 片葉子等緊你 🌿`), 800);
+    setTimeout(() => showToast(`樹上有 ${leaves.length} 片葉等緊你 🌿`), 1000);
   }
 }
 
 window.addEventListener('load', init);
+window.addEventListener('resize', () => { resizeTree(); });
 </script>
 </body>
 </html>
