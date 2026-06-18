@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/leaves.js": {
-      "runtime": "nodejs20.x"
-    }
-  }
-}

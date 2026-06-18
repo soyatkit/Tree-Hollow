@@ -764,15 +764,15 @@ function renderTree() {
 }
 
 // ═══════════════════════════════════════
-//  API CONFIG
+//  JSONBin.io — real-time shared leaf database
 // ═══════════════════════════════════════
-const API_BASE = (() => {
-  const host = location.hostname;
-  // Same origin on Vercel or local dev — no CORS needed
-  if (host.includes('vercel.app') || host === 'localhost') return '';
-  // GitHub Pages: point to Vercel backend
-  return 'https://treehollow-ivory.vercel.app';
-})();
+const JSONBIN_ID = '6a33f731da38895dfed7627a';
+const JSONBIN_KEY = '$2a$10$A9ScTK3klhmhRDYkNU8UaupJulJq8nrFh/IUU4dyFaEC93U/6SXkO';
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+const JSONBIN_HEADERS = {
+  'Content-Type': 'application/json',
+  'X-Master-Key': JSONBIN_KEY,
+};
 
 // ═══════════════════════════════════════
 //  LEAVES — Colorful pixel leaves
@@ -839,24 +839,16 @@ class Leaf {
 
 let leaves = [];
 
-// ── API helpers ──
-async function apiFetch(path, options = {}) {
-  const url = API_BASE + path;
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  return res.json();
-}
-
+// ── JSONBin.io helpers ──
 async function loadLeaves() {
   try {
-    const data = await apiFetch('/api/leaves');
-    leaves = data.map(d => Leaf.fromData(d));
-    console.log(`🌿 Loaded ${leaves.length} leaves from server`);
+    const res = await fetch(JSONBIN_URL, { headers: JSONBIN_HEADERS });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    leaves = (data.record || []).map(d => Leaf.fromData(d));
+    console.log(`🌿 Loaded ${leaves.length} leaves from JSONBin.io`);
   } catch(e) {
-    console.warn('⚠️  Cannot reach server, loading local cache...');
+    console.warn('⚠️  Cannot reach JSONBin.io, loading local cache...');
     try {
       const raw = localStorage.getItem('treehollow_v2_leaves');
       if (raw) {
@@ -867,19 +859,27 @@ async function loadLeaves() {
   }
 }
 
+async function saveLeavesToServer() {
+  const record = leaves.map(l => l.toData());
+  await fetch(JSONBIN_URL, {
+    method: 'PUT',
+    headers: JSONBIN_HEADERS,
+    body: JSON.stringify(record),
+  });
+}
+
 async function apiAddLeaf(text) {
   const tempLeaf = new Leaf(text);
-  const payload = tempLeaf.toData();
   try {
-    const saved = await apiFetch('/api/leaves', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-    tempLeaf.id = saved.id;
-    leaves.push(tempLeaf);
+    // Read latest from server first (avoid race), then push + write
+    const res = await fetch(JSONBIN_URL, { headers: JSONBIN_HEADERS });
+    const data = await res.json();
+    const serverLeaves = (data.record || []).map(d => Leaf.fromData(d));
+    serverLeaves.push(tempLeaf);
+    leaves = serverLeaves;
+    await saveLeavesToServer();
     return tempLeaf;
   } catch(e) {
-    // Fallback: keep locally
     leaves.push(tempLeaf);
     localStorage.setItem('treehollow_v2_leaves', JSON.stringify(leaves.map(l => l.toData())));
     return tempLeaf;
@@ -888,17 +888,16 @@ async function apiAddLeaf(text) {
 
 async function apiRemoveLeaf(leafId) {
   try {
-    await apiFetch(`/api/leaves?id=${leafId}`, { method: 'DELETE' });
+    const res = await fetch(JSONBIN_URL, { headers: JSONBIN_HEADERS });
+    const data = await res.json();
+    const serverLeaves = (data.record || []).filter(l => l.id !== leafId).map(d => Leaf.fromData(d));
+    leaves = serverLeaves;
+    await saveLeavesToServer();
   } catch(e) {
-    // Fallback: remove locally
-  }
-  const idx = leaves.findIndex(l => l.id === leafId);
-  if (idx !== -1) {
-    const [removed] = leaves.splice(idx, 1);
+    const idx = leaves.findIndex(l => l.id === leafId);
+    if (idx !== -1) leaves.splice(idx, 1);
     localStorage.setItem('treehollow_v2_leaves', JSON.stringify(leaves.map(l => l.toData())));
-    return removed;
   }
-  return null;
 }
 
 function drawLeaf(leaf) {
@@ -1182,17 +1181,19 @@ async function init() {
   // Periodic refresh — check for new leaves from other devices every 8s
   setInterval(async () => {
     try {
-      const data = await apiFetch('/api/leaves');
-      const serverIds = new Set(data.map(d => d.id));
+      const res = await fetch(JSONBIN_URL, { headers: JSONBIN_HEADERS });
+      const data = await res.json();
+      const serverLeaves = (data.record || []).map(d => Leaf.fromData(d));
+      const serverIds = new Set(serverLeaves.map(d => d.id));
       // Add new leaves not yet in local state
-      for (const d of data) {
-        if (!leaves.find(l => l.id === d.id)) {
-          leaves.push(Leaf.fromData(d));
+      for (const l of serverLeaves) {
+        if (!leaves.find(x => x.id === l.id)) {
+          leaves.push(l);
         }
       }
       // Remove leaves deleted by others
       leaves = leaves.filter(l => serverIds.has(l.id));
-    } catch(e) { /* silent — server might be sleeping */ }
+    } catch(e) { /* silent */ }
   }, 8000);
 }
 
