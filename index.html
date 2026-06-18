@@ -767,11 +767,11 @@ function renderTree() {
 //  API CONFIG
 // ═══════════════════════════════════════
 const API_BASE = (() => {
-  // If running on Render (same origin), use relative URLs — no CORS needed
   const host = location.hostname;
-  if (host.includes('onrender.com') || host === 'localhost') return '';
-  // Otherwise (GitHub Pages), use the Render backend URL
-  return 'https://treehollow-api.onrender.com';
+  // Same origin on Vercel or local dev — no CORS needed
+  if (host.includes('vercel.app') || host === 'localhost') return '';
+  // GitHub Pages: point to Vercel backend
+  return 'https://treehollow-ivory.vercel.app';
 })();
 
 // ═══════════════════════════════════════
